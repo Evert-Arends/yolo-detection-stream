@@ -54,8 +54,9 @@ Height = image.shape[0]
 scale = 0.00392
 
 COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
-
+# cv2.dnn.DNN_TARGET_OPENCL = True
 net = cv2.dnn.readNet(args.weights, args.config)
+net.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
 fps = FPS().start()
 
 while True:
