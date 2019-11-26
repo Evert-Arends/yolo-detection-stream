@@ -8,6 +8,7 @@ CFG = "yolov3.cfg"
 SCALE = 0.00392  # 1/255, 入力のスケール
 INP_SHAPE = (416, 416)  # 入力サイズ
 MEAN = 0
+
 RGB = True
 
 # Load a network
