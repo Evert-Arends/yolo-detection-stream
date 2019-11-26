@@ -1,3 +1,5 @@
+from time import sleep
+
 import cv2
 import argparse
 import numpy as np
@@ -16,6 +18,8 @@ ap.add_argument('-cl', '--classes', required=True,
 args = ap.parse_args()
 
 
+# wget https://pjreddie.com/media/files/yolov3.weights
+
 def get_output_layers(net):
     layer_names = net.getLayerNames()
 
@@ -26,6 +30,7 @@ def get_output_layers(net):
 
 def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h):
     label = str(classes[class_id])
+    label = label + " {0}".format(confidence)
 
     color = COLORS[class_id]
 
@@ -39,7 +44,9 @@ classes = None
 with open(args.classes, 'r') as f:
     classes = [line.strip() for line in f.readlines()]
 
-vs = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
+# vs = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
+vs = VideoStream(src=0).start()
+sleep(2)
 image = vs.read()
 
 Width = image.shape[1]
@@ -53,7 +60,7 @@ fps = FPS().start()
 
 while True:
     image = frame = vs.read()
-    blob = cv2.dnn.blobFromImage(image, scale, (416, 416), (0, 0, 0), True, crop=False)
+    blob = cv2.dnn.blobFromImage(image, scale, (288, 288), (0, 0, 0), True, crop=False)
 
     net.setInput(blob)
 
@@ -93,7 +100,7 @@ while True:
         draw_prediction(image, class_ids[i], confidences[i], round(x), round(y), round(x + w), round(y + h))
 
     cv2.imshow("object detection", image)
-    cv2.imwrite("object-detection.jpg", image)
+    # cv2.imwrite("object-detection.jpg", image)
     key = cv2.waitKey(1) & 0xFF
 
     # if the `q` key was pressed, break from the loop
