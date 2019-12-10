@@ -1,3 +1,4 @@
+from queue import Queue
 from time import sleep
 
 import cv2
@@ -5,6 +6,10 @@ import argparse
 import numpy as np
 from imutils.video import VideoStream
 from imutils.video import FPS
+
+screenGrabsQueue = Queue()
+
+
 
 ap = argparse.ArgumentParser()
 ap.add_argument('-i', '--image', required=True,
