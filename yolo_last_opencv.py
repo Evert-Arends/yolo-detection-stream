@@ -52,11 +52,11 @@ def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h, inner_c
 
 
 class FrameGrabThread(threading.Thread):
-    def __init__(self, thread_id, name, video_stream, inner_cv2, inner_scale, grab_count_per_second=30):
+    def __init__(self, thread_id, name, video_streams, inner_cv2, inner_scale, grab_count_per_second=30):
         threading.Thread.__init__(self)
         self.scale = inner_scale
         self.cv2 = inner_cv2
-        self.vs = video_stream
+        self.vs = video_streams
         self.grab_count_per_second = grab_count_per_second
         self.sleepTime = 60 / self.grab_count_per_second
         self.threadID = thread_id
@@ -69,23 +69,30 @@ class FrameGrabThread(threading.Thread):
 
     def grab_frame(self):
         print("Should grab a screen")
-        _image = frame = self.vs[0].read()
-        _image1 = frame = self.vs[1].read()
-        _image2 = frame = self.vs[2].read()
+        camMid = vs.read()
+        camLeft = vs.read()
+        camRight = vs.read()
 
-        img1 = cv2.imread(_image, 0)
-        img2 = cv2.imread(_image1, 0)
-        img3 = cv2.imread(_image1, 0)
-        h1, w1 = img1.shape[:2]
-        h2, w2 = img2.shape[:2]
-        h3, w3 = img2.shape[:2]
-        vis = np.zeros((max(h1, h2, h3), w1+w2+w3), np.uint8)
-        vis[:h1, :w1] = img1
-        vis[:h2, w1:w1+w2] = img2
-        vis[:h3, w2:w2+w3] = img3
-        vis = cv2.cvtColor(vis, cv2.COLOR_GRAY2BGR)
+        x = 0
+        y = 0
 
-        frameGrabsQueue.put(vis)
+        midHeight = 640
+        midWidth = 400
+
+        leftHeight = 640
+        LeftWidth = 400
+
+        rightHeight = 640
+        rightWidth = 400
+        # print(img)
+        # img0 = img0[y:y+h0, x:x+w0]
+        camLeft = camLeft[y:y + leftHeight, x:x + LeftWidth]
+        camMid = camMid[y:y + midHeight, x:x + midWidth]
+        camRight = camRight[y:y + rightHeight, x:x + rightWidth]
+        img = np.concatenate((camLeft, camMid, camRight), axis=1)
+        np.asarray(img)
+
+        frameGrabsQueue.put(img)
         sleep(.60)
 
 
@@ -188,8 +195,6 @@ if __name__ == '__main__':
     # frameShowThread.setDaemon(True)
     # frameShowThread.start()
 
-
-
     print("Starting frame-scan threads: ({0})".format(thread_count))
     for thread in range(thread_count):
         sleep(0.1)
@@ -201,7 +206,7 @@ if __name__ == '__main__':
 
     print("Starting frame grab thread")
     vs_list = [vs, vs1, vs2]
-    frameGrabThread = FrameGrabThread(0, "FrameGrabThread", vs_list, cv2, scale, 30)
+    frameGrabThread = FrameGrabThread(0, "FrameGrabThread", vs, cv2, scale, 30)
     frameGrabThread.setDaemon(True)
     frameGrabThread.start()
     print("Done..")
