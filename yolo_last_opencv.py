@@ -2,6 +2,8 @@ from queue import Queue
 from time import sleep
 import threading
 import time
+import datetime
+from StampImage import Image as StampImage
 
 import cv2
 import argparse
@@ -67,9 +69,24 @@ class FrameGrabThread(threading.Thread):
 
     def grab_frame(self):
         print("Should grab a screen")
-        _image = frame = self.vs.read()
-        frameGrabsQueue.put(_image)
-        sleep(.21)
+        _image = frame = self.vs[0].read()
+        _image1 = frame = self.vs[1].read()
+        _image2 = frame = self.vs[2].read()
+
+        img1 = cv2.imread(_image, 0)
+        img2 = cv2.imread(_image1, 0)
+        img3 = cv2.imread(_image1, 0)
+        h1, w1 = img1.shape[:2]
+        h2, w2 = img2.shape[:2]
+        h3, w3 = img2.shape[:2]
+        vis = np.zeros((max(h1, h2, h3), w1+w2+w3), np.uint8)
+        vis[:h1, :w1] = img1
+        vis[:h2, w1:w1+w2] = img2
+        vis[:h3, w2:w2+w3] = img3
+        vis = cv2.cvtColor(vis, cv2.COLOR_GRAY2BGR)
+
+        frameGrabsQueue.put(vis)
+        sleep(.60)
 
 
 class FrameScanThread(threading.Thread):
@@ -156,8 +173,10 @@ if __name__ == '__main__':
 
     fps = FPS().start()
 
-    # vs = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
-    vs = VideoStream(src=0).start()
+    vs = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
+    vs1 = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
+    vs2 = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
+    # vs = VideoStream(src=0).start()
     sleep(2)
     first_frame = vs.read()
     Width = first_frame.shape[1]
@@ -178,10 +197,11 @@ if __name__ == '__main__':
         frameScanThread7.setDaemon(True)
         frameScanThread7.start()
 
-    sleep(3)
+    sleep(5)
 
     print("Starting frame grab thread")
-    frameGrabThread = FrameGrabThread(0, "FrameGrabThread", vs, cv2, scale, 30)
+    vs_list = [vs, vs1, vs2]
+    frameGrabThread = FrameGrabThread(0, "FrameGrabThread", vs_list, cv2, scale, 30)
     frameGrabThread.setDaemon(True)
     frameGrabThread.start()
     print("Done..")
