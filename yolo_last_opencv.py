@@ -48,6 +48,17 @@ def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h, inner_c
 
     inner_cv.putText(img, label, (x - 10, y - 10), inner_cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
+    # Calculate center point pixel x, y
+    x1 = x
+    x2 = x_plus_w
+    y1 = y
+    y2 = y_plus_h
+
+    xCenter = int((x1 + x2) / 2)  # Center X coord of detection box.
+    yCenter = int((y1 + y2) / 2)  # Center Y coord of detection box.
+    # See if correct X,Y by drawing a circle.
+    inner_cv.circle(img, (xCenter, yCenter), 5, color, -1)
+
     return img
 
 
