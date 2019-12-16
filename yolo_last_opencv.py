@@ -27,6 +27,7 @@ args = ap.parse_args()
 
 # wget https://pjreddie.com/media/files/yolov3.weights
 
+
 def get_output_layers(net):
     layer_names = net.getLayerNames()
 
@@ -68,7 +69,7 @@ class FrameGrabThread(threading.Thread):
         print("Should grab a screen")
         _image = frame = self.vs.read()
         frameGrabsQueue.put(_image)
-        sleep(.450)
+        sleep(.21)
 
 
 class FrameScanThread(threading.Thread):
@@ -136,49 +137,23 @@ class FrameScanThread(threading.Thread):
 # cv2.dnn.DNN_TARGET_OPENCL = True
 
 
-class FrameShowThread(threading.Thread):
-    def __init__(self, thread_id, name, cv2):
-        threading.Thread.__init__(self)
-        self.cv2 = cv2
-        self.threadID = thread_id
-        self.name = name
-
-    def run(self):
-        while True:
-            self.grab_frame()
-
-    def grab_frame(self):
-        if frameToShowQueue.empty():
-            print("Nothing to show, queue empty")
-            sleep(0.4)
-        else:
-            i_image = frameToShowQueue.get()
-            self.cv2.imwrite("object-detection.jpg", i_image)
-            self.cv2.imshow("object detection", i_image)
-            self.cv2.waitKey() & 0xFF
-            # if the `q` key was pressed, break from the loop
-            if key == ord("q"):
-                print("yo")
-
-
 if __name__ == '__main__':
     classes = None
 
+    net_count = 25
+    thread_count = 25
     with open(args.classes, 'r') as f:
         classes = [line.strip() for line in f.readlines()]
-        
-    net1 = cv2.dnn.readNet(args.weights, args.config)
-    net2 = cv2.dnn.readNet(args.weights, args.config)
-    net3 = cv2.dnn.readNet(args.weights, args.config)
-    net1.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
-    net2.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
-    net3.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
-    net4 = cv2.dnn.readNet(args.weights, args.config)
-    net5 = cv2.dnn.readNet(args.weights, args.config)
-    net6 = cv2.dnn.readNet(args.weights, args.config)
-    net4.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
-    net5.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
-    net6.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
+
+    print("Initializing networks....")
+
+    net_dict = []
+    for item in range(net_count):
+        net_dict.append(cv2.dnn.readNet(args.weights, args.config))
+        net_dict[item].setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+
+    print("Done..")
+
     fps = FPS().start()
 
     # vs = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
@@ -194,35 +169,27 @@ if __name__ == '__main__':
     # frameShowThread.setDaemon(True)
     # frameShowThread.start()
 
+
+
+    print("Starting frame-scan threads: ({0})".format(thread_count))
+    for thread in range(thread_count):
+        sleep(0.1)
+        frameScanThread7 = FrameScanThread(1, "scan", net_dict[thread], cv2, scale, COLORS)
+        frameScanThread7.setDaemon(True)
+        frameScanThread7.start()
+
+    sleep(3)
+
+    print("Starting frame grab thread")
     frameGrabThread = FrameGrabThread(0, "FrameGrabThread", vs, cv2, scale, 30)
     frameGrabThread.setDaemon(True)
     frameGrabThread.start()
-    frameScanThread = FrameScanThread(1, "scan", net1, cv2, scale, COLORS)
-    frameScanThread.setDaemon(True)
-    frameScanThread.start()
-    frameScanThread2 = FrameScanThread(1, "scan", net2, cv2, scale, COLORS)
-    frameScanThread2.setDaemon(True)
-    frameScanThread2.start()
-    frameScanThread3 = FrameScanThread(1, "scan", net3, cv2, scale, COLORS)
-    frameScanThread3.setDaemon(True)
-    frameScanThread3.start()
-    frameScanThread4 = FrameScanThread(1, "scan", net4, cv2, scale, COLORS)
-    frameScanThread4.setDaemon(True)
-    frameScanThread4.start()
-    frameScanThread5 = FrameScanThread(1, "scan", net5, cv2, scale, COLORS)
-    frameScanThread5.setDaemon(True)
-    frameScanThread5.start()
-    frameScanThread6 = FrameScanThread(1, "scan", net6, cv2, scale, COLORS)
-    frameScanThread6.setDaemon(True)
-    frameScanThread6.start()
+    print("Done..")
 
-    # sleep(1)
     frameToShowQueue.put(first_frame)
-
+    print("Running show now!")
     while True:
-        if frameToShowQueue.empty():
-            print("Nothing to show, queue empty")
-        else:
+        if not frameToShowQueue.empty():
             i_image = frameToShowQueue.get()
             cv2.imwrite("object-detection.jpg", i_image)
             cv2.imshow("object detection", i_image)
