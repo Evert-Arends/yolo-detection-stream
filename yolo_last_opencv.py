@@ -76,6 +76,7 @@ class FrameGrabThread(threading.Thread):
         self.sleepTime = 60 / self.grab_count_per_second
         self.threadID = thread_id
         self.name = name
+        self.should_run = True
 
     def run(self):
         print("Starting " + self.name)
@@ -84,35 +85,38 @@ class FrameGrabThread(threading.Thread):
 
     def grab_frame(self):
         print("Should grab a screen")
+        if self.should_run:
+            cam_left = StampImageLibrary.StampImage(
+                frame=self.vs[0].read(),
+                camera_id=0,
+                x_offset=0,
+                y_offset=0,
+                width=800,
+                height=640
+            )
+            cam_mid = StampImageLibrary.StampImage(
+                frame=self.vs[0].read(),
+                camera_id=1,
+                x_offset=800,
+                y_offset=0,
+                width=800,
+                height=640
+            )
+            cam_right = StampImageLibrary.StampImage(
+                frame=self.vs[0].read(),
+                camera_id=2,
+                x_offset=1600,
+                y_offset=0,
+                width=800,
+                height=640
+            )
 
-        cam_left = StampImageLibrary.StampImage(
-            frame=self.vs[1].read(),
-            camera_id=0,
-            x_offset=0,
-            y_offset=0,
-            width=800,
-            height=640
-        )
-        cam_mid = StampImageLibrary.StampImage(
-            frame=self.vs[0].read(),
-            camera_id=1,
-            x_offset=800,
-            y_offset=0,
-            width=800,
-            height=640
-        )
-        cam_right = StampImageLibrary.StampImage(
-            frame=self.vs[0].read(),
-            camera_id=2,
-            x_offset=1600,
-            y_offset=0,
-            width=800,
-            height=640
-        )
-
-        images_collection = StampImageLibrary.StampImageCollection([cam_left, cam_mid, cam_right])
-        frameGrabsQueue.put(images_collection)
-        sleep(.45)
+            images_collection = StampImageLibrary.StampImageCollection([cam_left, cam_mid, cam_right])
+            frameGrabsQueue.put(images_collection)
+            self.should_run = False
+        else:
+            self.should_run = True
+        sleep(.33)
 
 
 class FrameScanThread(threading.Thread):
@@ -137,7 +141,7 @@ class FrameScanThread(threading.Thread):
             _image = frameGrabsQueue.get()
             _image.merge_image()
 
-            _blob = self.cv2.dnn.blobFromImage(_image.get_merged_image(), self.scale, (800, 800), (0, 0, 0), True, crop=False)
+            _blob = self.cv2.dnn.blobFromImage(_image.get_merged_image(), self.scale, (288, 288), (0, 0, 0), True, crop=False)
             self._net.setInput(_blob)
             outs = self._net.forward(get_output_layers(self._net))
 
@@ -185,8 +189,8 @@ class FrameScanThread(threading.Thread):
 if __name__ == '__main__':
     classes = None
 
-    net_count = 12
-    thread_count = 12
+    net_count = 15
+    thread_count = 15
     with open(args.classes, 'r') as f:
         classes = [line.strip() for line in f.readlines()]
 
@@ -207,7 +211,7 @@ if __name__ == '__main__':
     vs = VideoStream(src=0).start()
     sleep(2)
     first_frame = vs.read()
-    Width = first_frame.shape[1]
+    Width = 2000
     Height = first_frame.shape[0]
     scale = 0.00392
     COLORS = np.random.uniform(0, 255, size=(len(classes), 3))

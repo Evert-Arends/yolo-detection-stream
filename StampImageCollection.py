@@ -8,10 +8,10 @@ class StampImageCollection:
         self.timeStamp = datetime.now()
         self.mergedImage = None
 
-    def set_image(self, image):
+    def set_images(self, image):
         self.images = image
 
-    def get_image(self):
+    def get_images(self):
         return self.images
 
     def merge_image(self):
