@@ -115,11 +115,13 @@ class FrameGrabThread(threading.Thread):
             frameGrabsQueue.put(cam_left)
             frameGrabsQueue.put(cam_mid)
             frameGrabsQueue.put(cam_right)
-
+            frameGrabsQueue.put(item)
+            # frameGrabsQueue.put(cam_right)
             self.should_run = False
         else:
             if not self.should_run:
                 self.should_run = True
+
 
         sleep(.40)
 
