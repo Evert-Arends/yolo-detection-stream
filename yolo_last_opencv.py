@@ -48,9 +48,9 @@ def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h, inner_c
 
     color = COLORS[class_id]
     # x = (x + img.width)
-    inner_cv.rectangle(img.get_merged_image(), (x, y), (x_plus_w, y_plus_h), color, 2)
+    inner_cv.rectangle(img.get_image(), (x, y), (x_plus_w, y_plus_h), color, 2)
 
-    inner_cv.putText(img.get_merged_image(), label, (x - 10, y - 10), inner_cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    inner_cv.putText(img.get_image(), label, (x - 10, y - 10), inner_cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
     # Calculate center point pixel x, y
     x1 = x
@@ -61,7 +61,7 @@ def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h, inner_c
     xCenter = int((x1 + x2) / 2)  # Center X coord of detection box.
     yCenter = int((y1 + y2) / 2)  # Center Y coord of detection box.
     # See if correct X,Y by drawing a circle.
-    inner_cv.circle(img.get_merged_image(), (xCenter, yCenter), 5, color, -1)
+    inner_cv.circle(img.get_image(), (xCenter, yCenter), 5, color, -1)
 
     return img
 
@@ -77,6 +77,7 @@ class FrameGrabThread(threading.Thread):
         self.threadID = thread_id
         self.name = name
         self.should_run = True
+        self.should_run1 = True
 
     def run(self):
         print("Starting " + self.name)
@@ -85,38 +86,42 @@ class FrameGrabThread(threading.Thread):
 
     def grab_frame(self):
         print("Should grab a screen")
-        if self.should_run:
+        if self.should_run and self.should_run1:
             cam_left = StampImageLibrary.StampImage(
                 frame=self.vs[0].read(),
                 camera_id=0,
                 x_offset=0,
                 y_offset=0,
-                width=800,
-                height=640
+                width=Width,
+                height=Height
             )
             cam_mid = StampImageLibrary.StampImage(
                 frame=self.vs[0].read(),
                 camera_id=1,
                 x_offset=800,
                 y_offset=0,
-                width=800,
-                height=640
+                width=Width,
+                height=Height
             )
             cam_right = StampImageLibrary.StampImage(
                 frame=self.vs[0].read(),
                 camera_id=2,
                 x_offset=1600,
                 y_offset=0,
-                width=800,
-                height=640
+                width=Width,
+                height=Height
             )
 
-            images_collection = StampImageLibrary.StampImageCollection([cam_left, cam_mid, cam_right])
-            frameGrabsQueue.put(images_collection)
+            frameGrabsQueue.put(cam_left)
+            frameGrabsQueue.put(cam_mid)
+            frameGrabsQueue.put(cam_right)
+
             self.should_run = False
         else:
-            self.should_run = True
-        sleep(.33)
+            if not self.should_run:
+                self.should_run = True
+
+        sleep(.40)
 
 
 class FrameScanThread(threading.Thread):
@@ -139,9 +144,9 @@ class FrameScanThread(threading.Thread):
             print("analyzing frame grab....")
 
             _image = frameGrabsQueue.get()
-            _image.merge_image()
 
-            _blob = self.cv2.dnn.blobFromImage(_image.get_merged_image(), self.scale, (288, 288), (0, 0, 0), True, crop=False)
+
+            _blob = self.cv2.dnn.blobFromImage(_image.get_image(), self.scale, (288, 288), (0, 0, 0), True, crop=False)
             self._net.setInput(_blob)
             outs = self._net.forward(get_output_layers(self._net))
 
@@ -189,8 +194,8 @@ class FrameScanThread(threading.Thread):
 if __name__ == '__main__':
     classes = None
 
-    net_count = 15
-    thread_count = 15
+    net_count = 16
+    thread_count = 16
     with open(args.classes, 'r') as f:
         classes = [line.strip() for line in f.readlines()]
 
@@ -205,13 +210,13 @@ if __name__ == '__main__':
 
     fps = FPS().start()
 
-    # vs = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
+    vs = VideoStream(src="http://208.105.238.178:9080/mjpg/video.mjpg").start()
     vs1 = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
     # vs2 = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
-    vs = VideoStream(src=0).start()
+    # vs = VideoStream(src=0).start()
     sleep(2)
     first_frame = vs.read()
-    Width = 2000
+    Width = first_frame.shape[1]
     Height = first_frame.shape[0]
     scale = 0.00392
     COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
@@ -241,8 +246,8 @@ if __name__ == '__main__':
     while True:
         if not frameToShowQueue.empty():
             i_image = frameToShowQueue.get()
-            cv2.imwrite("object-detection.jpg", i_image.get_merged_image())
-            cv2.imshow("object detection", i_image.get_merged_image())
+            cv2.imwrite("object-detection.jpg", i_image.get_image())
+            cv2.imshow("object detection", i_image.get_image())
             key = cv2.waitKey(1) & 0xFF
             # if the `q` key was pressed, break from the loop
             if key == ord("q"):
