@@ -3,7 +3,7 @@ from time import sleep
 import threading
 import time
 import datetime
-from StampImage import Image as StampImage
+import StampImageCollection as StampImageLibrary
 
 import cv2
 import argparse
@@ -39,14 +39,18 @@ def get_output_layers(net):
 
 
 def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h, inner_cv):
+    print("...")
+    print("X and Y Coordinates: X: {0}, Y: {1}".format(x, y))
+    print("...")
+
     label = str(classes[class_id])
     label = label + " {0}".format(confidence)
 
     color = COLORS[class_id]
+    # x = (x + img.width)
+    inner_cv.rectangle(img.get_merged_image(), (x, y), (x_plus_w, y_plus_h), color, 2)
 
-    inner_cv.rectangle(img, (x, y), (x_plus_w, y_plus_h), color, 2)
-
-    inner_cv.putText(img, label, (x - 10, y - 10), inner_cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    inner_cv.putText(img.get_merged_image(), label, (x - 10, y - 10), inner_cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
     # Calculate center point pixel x, y
     x1 = x
@@ -57,7 +61,7 @@ def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h, inner_c
     xCenter = int((x1 + x2) / 2)  # Center X coord of detection box.
     yCenter = int((y1 + y2) / 2)  # Center Y coord of detection box.
     # See if correct X,Y by drawing a circle.
-    inner_cv.circle(img, (xCenter, yCenter), 5, color, -1)
+    inner_cv.circle(img.get_merged_image(), (xCenter, yCenter), 5, color, -1)
 
     return img
 
@@ -80,31 +84,35 @@ class FrameGrabThread(threading.Thread):
 
     def grab_frame(self):
         print("Should grab a screen")
-        camMid = vs.read()
-        camLeft = vs.read()
-        camRight = vs.read()
 
-        x = 0
-        y = 0
+        cam_left = StampImageLibrary.StampImage(
+            frame=self.vs[1].read(),
+            camera_id=0,
+            x_offset=0,
+            y_offset=0,
+            width=800,
+            height=640
+        )
+        cam_mid = StampImageLibrary.StampImage(
+            frame=self.vs[0].read(),
+            camera_id=1,
+            x_offset=800,
+            y_offset=0,
+            width=800,
+            height=640
+        )
+        cam_right = StampImageLibrary.StampImage(
+            frame=self.vs[0].read(),
+            camera_id=2,
+            x_offset=1600,
+            y_offset=0,
+            width=800,
+            height=640
+        )
 
-        midHeight = 640
-        midWidth = 400
-
-        leftHeight = 640
-        LeftWidth = 400
-
-        rightHeight = 640
-        rightWidth = 400
-        # print(img)
-        # img0 = img0[y:y+h0, x:x+w0]
-        camLeft = camLeft[y:y + leftHeight, x:x + LeftWidth]
-        camMid = camMid[y:y + midHeight, x:x + midWidth]
-        camRight = camRight[y:y + rightHeight, x:x + rightWidth]
-        img = np.concatenate((camLeft, camMid, camRight), axis=1)
-        np.asarray(img)
-
-        frameGrabsQueue.put(img)
-        sleep(.60)
+        images_collection = StampImageLibrary.StampImageCollection([cam_left, cam_mid, cam_right])
+        frameGrabsQueue.put(images_collection)
+        sleep(.45)
 
 
 class FrameScanThread(threading.Thread):
@@ -123,10 +131,13 @@ class FrameScanThread(threading.Thread):
 
     def analyze_frame(self):
         if not frameGrabsQueue.empty():
-            print("The framegrab current queue: {0}".format(frameGrabsQueue.qsize()))
+            print("The frame grab current queue: {0}".format(frameGrabsQueue.qsize()))
             print("analyzing frame grab....")
+
             _image = frameGrabsQueue.get()
-            _blob = self.cv2.dnn.blobFromImage(_image, self.scale, (288, 288), (0, 0, 0), True, crop=False)
+            _image.merge_image()
+
+            _blob = self.cv2.dnn.blobFromImage(_image.get_merged_image(), self.scale, (800, 800), (0, 0, 0), True, crop=False)
             self._net.setInput(_blob)
             outs = self._net.forward(get_output_layers(self._net))
 
@@ -165,7 +176,6 @@ class FrameScanThread(threading.Thread):
                 draw_prediction(back_img, class_ids[i], confidences[i], round(x), round(y), round(x + w),
                                 round(y + h),
                                 self.cv2)
-
             frameToShowQueue.put(back_img)
 
 
@@ -175,8 +185,8 @@ class FrameScanThread(threading.Thread):
 if __name__ == '__main__':
     classes = None
 
-    net_count = 25
-    thread_count = 25
+    net_count = 12
+    thread_count = 12
     with open(args.classes, 'r') as f:
         classes = [line.strip() for line in f.readlines()]
 
@@ -191,10 +201,10 @@ if __name__ == '__main__':
 
     fps = FPS().start()
 
-    vs = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
+    # vs = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
     vs1 = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
-    vs2 = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
-    # vs = VideoStream(src=0).start()
+    # vs2 = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
+    vs = VideoStream(src=0).start()
     sleep(2)
     first_frame = vs.read()
     Width = first_frame.shape[1]
@@ -216,19 +226,19 @@ if __name__ == '__main__':
     sleep(5)
 
     print("Starting frame grab thread")
-    vs_list = [vs, vs1, vs2]
-    frameGrabThread = FrameGrabThread(0, "FrameGrabThread", vs, cv2, scale, 30)
+    # vs_list = [vs, vs1, vs2]
+    frameGrabThread = FrameGrabThread(0, "FrameGrabThread", [vs, vs1], cv2, scale, 30)
     frameGrabThread.setDaemon(True)
     frameGrabThread.start()
     print("Done..")
 
-    frameToShowQueue.put(first_frame)
+    # frameToShowQueue.put(first_frame)
     print("Running show now!")
     while True:
         if not frameToShowQueue.empty():
             i_image = frameToShowQueue.get()
-            cv2.imwrite("object-detection.jpg", i_image)
-            cv2.imshow("object detection", i_image)
+            cv2.imwrite("object-detection.jpg", i_image.get_merged_image())
+            cv2.imshow("object detection", i_image.get_merged_image())
             key = cv2.waitKey(1) & 0xFF
             # if the `q` key was pressed, break from the loop
             if key == ord("q"):
