@@ -86,7 +86,7 @@ class FrameGrabThread(threading.Thread):
 
     def grab_frame(self):
         print("Should grab a screen")
-        if self.should_run and self.should_run1:
+        if self.should_run:
             cam_left = StampImageLibrary.StampImage(
                 frame=self.vs[0].read(),
                 camera_id=0,
@@ -115,8 +115,6 @@ class FrameGrabThread(threading.Thread):
             frameGrabsQueue.put(cam_left)
             frameGrabsQueue.put(cam_mid)
             frameGrabsQueue.put(cam_right)
-            frameGrabsQueue.put(item)
-            # frameGrabsQueue.put(cam_right)
             self.should_run = False
         else:
             if not self.should_run:
