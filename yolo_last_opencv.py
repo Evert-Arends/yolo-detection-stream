@@ -112,14 +112,13 @@ class FrameGrabThread(threading.Thread):
                 height=Height
             )
 
-            frameGrabsQueue.put(cam_left)
-            frameGrabsQueue.put(cam_mid)
             frameGrabsQueue.put(cam_right)
+            frameGrabsQueue.put(cam_mid)
+            frameGrabsQueue.put(cam_left)
             self.should_run = False
         else:
             if not self.should_run:
                 self.should_run = True
-
 
         sleep(.40)
 
@@ -144,7 +143,6 @@ class FrameScanThread(threading.Thread):
             print("analyzing frame grab....")
 
             _image = frameGrabsQueue.get()
-
 
             _blob = self.cv2.dnn.blobFromImage(_image.get_image(), self.scale, (288, 288), (0, 0, 0), True, crop=False)
             self._net.setInput(_blob)
