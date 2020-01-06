@@ -1,8 +1,13 @@
+# python yolo_last_opencv.py --image dog.jpg --config yolov3.cfg --weights yolov3.weights --classes yolov3.txt
+import _thread
 from queue import Queue
 from time import sleep
 import threading
 import time
 import datetime
+
+import requests
+
 import StampImageCollection as StampImageLibrary
 
 import cv2
@@ -62,6 +67,24 @@ def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h, inner_c
     yCenter = int((y1 + y2) / 2)  # Center Y coord of detection box.
     # See if correct X,Y by drawing a circle.
     inner_cv.circle(img.get_image(), (xCenter, yCenter), 5, color, -1)
+
+    def post_the_thing(value):
+        url = "http://dwnb.nl:8880/measurements/"
+
+        payload = "unitTypes_UnitShort=locatie&measureingType_Type=locatie&value="+str(value)+"&sensors_id=K4rXHCiEylki6ewmPbCxAR7HYKhjRHoMsNUXkqaGzbR7vYEFPvf0Y1zF&location=datalab&secret=9cNTPuyfWRHxrhNOymBR2s7UjnpCyywA61BmXkQR3YZglP"
+        headers = {
+            'Content-Type': "application/x-www-form-urlencoded",
+            'Accept': "*/*"
+        }
+
+        response = requests.request("POST", url, data=payload, headers=headers)
+        print(response) #200 = success
+
+    # Add coords to "JSON string"
+    json_value = {'x': xCenter, 'y': yCenter} # TODO: Add dateTime
+
+    # JSON post
+    _thread.start_new_thread(post_the_thing, (json_value,))
 
     return img
 
@@ -192,8 +215,8 @@ class FrameScanThread(threading.Thread):
 if __name__ == '__main__':
     classes = None
 
-    net_count = 16
-    thread_count = 16
+    net_count = 5
+    thread_count = 5
     with open(args.classes, 'r') as f:
         classes = [line.strip() for line in f.readlines()]
 
@@ -208,10 +231,13 @@ if __name__ == '__main__':
 
     fps = FPS().start()
 
-    vs = VideoStream(src="http://208.105.238.178:9080/mjpg/video.mjpg").start()
-    vs1 = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
+    # vs = VideoStream(src="http://208.105.238.178:9080/mjpg/video.mjpg").start()
+    # vs = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
+    # vs1 = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
     # vs2 = VideoStream(src="http://74.92.195.57:81/mjpg/video.mjpg").start()
-    # vs = VideoStream(src=0).start()
+    vs = VideoStream(src=0).start()
+    vs1 = vs
+    # vs2 = VideoStream(src=0).start()
     sleep(2)
     first_frame = vs.read()
     Width = first_frame.shape[1]
