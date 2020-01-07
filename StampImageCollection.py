@@ -36,13 +36,14 @@ class StampImageCollection:
 
 
 class StampImage:
-    def __init__(self, frame, camera_id, x_offset, y_offset, width, height):
+    def __init__(self, frame, camera_id, x_offset, y_offset, width, height, current_datetime):
         self.images = frame
         self.cameraId = camera_id
         self.xOffset = x_offset
         self.yOffset = y_offset
         self.width = width
         self.height = height
+        self.current_datetime = current_datetime
 
     def set_image(self, image):
         self.images = image
@@ -58,3 +59,6 @@ class StampImage:
 
     def get_image(self):
         return self.images
+
+    def get_datetime(self):
+        return self.current_datetime

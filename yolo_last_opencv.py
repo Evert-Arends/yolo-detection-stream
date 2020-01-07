@@ -70,8 +70,10 @@ def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h, inner_c
 
     def post_the_thing(value):
         url = "http://dwnb.nl:8880/measurements/"
+        sensor_id = 'K4rXHCiEylki6ewmPbCxAR7HYKhjRHoMsNUXkqaGzbR7vYEFPvf0Y1zF'
+        secret = '9cNTPuyfWRHxrhNOymBR2s7UjnpCyywA61BmXkQR3YZglP'
 
-        payload = "unitTypes_UnitShort=locatie&measureingType_Type=locatie&value="+str(value)+"&sensors_id=K4rXHCiEylki6ewmPbCxAR7HYKhjRHoMsNUXkqaGzbR7vYEFPvf0Y1zF&location=datalab&secret=9cNTPuyfWRHxrhNOymBR2s7UjnpCyywA61BmXkQR3YZglP"
+        payload = "unitTypes_UnitShort=locatie&measureingType_Type=locatie&value="+str(value)+"&sensors_id="+sensor_id+"&location=datalab&secret="+secret
         headers = {
             'Content-Type': "application/x-www-form-urlencoded",
             'Accept': "*/*"
@@ -81,7 +83,7 @@ def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h, inner_c
         print(response) #200 = success
 
     # Add coords to "JSON string"
-    json_value = {'x': xCenter, 'y': yCenter} # TODO: Add dateTime
+    json_value = {'x': xCenter, 'y': yCenter, 'datetime': img.get_datetime()} # TODO: Add dateTime
 
     # JSON post
     _thread.start_new_thread(post_the_thing, (json_value,))
@@ -109,6 +111,7 @@ class FrameGrabThread(threading.Thread):
 
     def grab_frame(self):
         print("Should grab a screen")
+        datetime_now = str(datetime.datetime.now())
         if self.should_run:
             cam_left = StampImageLibrary.StampImage(
                 frame=self.vs[0].read(),
@@ -116,7 +119,8 @@ class FrameGrabThread(threading.Thread):
                 x_offset=0,
                 y_offset=0,
                 width=Width,
-                height=Height
+                height=Height,
+                current_datetime=datetime_now
             )
             cam_mid = StampImageLibrary.StampImage(
                 frame=self.vs[0].read(),
@@ -124,7 +128,8 @@ class FrameGrabThread(threading.Thread):
                 x_offset=800,
                 y_offset=0,
                 width=Width,
-                height=Height
+                height=Height,
+                current_datetime=datetime_now
             )
             cam_right = StampImageLibrary.StampImage(
                 frame=self.vs[0].read(),
@@ -132,7 +137,8 @@ class FrameGrabThread(threading.Thread):
                 x_offset=1600,
                 y_offset=0,
                 width=Width,
-                height=Height
+                height=Height,
+                current_datetime=datetime_now
             )
 
             frameGrabsQueue.put(cam_right)
